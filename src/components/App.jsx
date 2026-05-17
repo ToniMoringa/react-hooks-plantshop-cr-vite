@@ -1,20 +1,15 @@
 import { useState, useEffect } from 'react';
-import Header from './components/Header';
-import PlantPage from './components/PlantPage';
+import Header from './Header';
+import PlantPage from './PlantPage';
 
 function App() {
-  // State for plants
   const [plants, setPlants] = useState([]);
-  
-  // State for search term
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch plants on page load
   useEffect(() => {
     fetchPlants();
   }, []);
 
-  // Function to fetch all plants from backend
   const fetchPlants = async () => {
     try {
       const response = await fetch('http://localhost:6001/plants');
@@ -25,54 +20,49 @@ function App() {
     }
   };
 
-  //  add a new plant
   const addPlant = async (newPlant) => {
-    try {
-      const response = await fetch('http://localhost:6001/plants', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newPlant),
-      });
-      const savedPlant = await response.json();
-      setPlants([...plants, savedPlant]);
-    } catch (error) {
-      console.error('Error adding plant:', error);
-    }
+    const response = await fetch('http://localhost:6001/plants', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newPlant),
+    });
+
+    const savedPlant = await response.json();
+    setPlants([...plants, savedPlant]);
   };
 
-  //  update plant's inStock status
   const updatePlantStock = async (id, inStock) => {
+    // Update local state immediately for better UX
+    const updatedPlants = plants.map((plant) =>
+      plant.id === id ? { ...plant, inStock } : plant,
+    );
+    setPlants(updatedPlants);
+
+    // Then update the server
     try {
-      const response = await fetch(`http://localhost:6001/plants/${id}`, {
+      await fetch(`http://localhost:6001/plants/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ inStock }),
       });
-      const updatedPlant = await response.json();
-      
-      //  plant in state
-      const updatedPlants = plants.map(plant => 
-        plant.id === id ? updatedPlant : plant
-      );
-      setPlants(updatedPlants);
     } catch (error) {
       console.error('Error updating plant stock:', error);
     }
   };
 
-  // Filter plants based on search term
-  const filteredPlants = plants.filter(plant =>
-    plant.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPlants = plants.filter((plant) => {
+    if (!plant || !plant.name) return false;
+    return plant.name.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   return (
     <div className="app">
       <Header />
-      <PlantPage 
+      <PlantPage
         plants={filteredPlants}
         searchTerm={searchTerm}
         onSearch={setSearchTerm}
